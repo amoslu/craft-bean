@@ -24,11 +24,15 @@ async function onSubmit() {
 
 <template>
   <div class="login-wrap">
-    <el-card class="login-card">
-      <h2 class="title">craft-bean 烘焙工坊管理</h2>
+    <el-card class="login-card" shadow="always">
+      <div class="brand">
+        <span class="brand-logo">☕</span>
+        <h2 class="title">craft-bean</h2>
+        <p class="subtitle">咖啡烘焙工坊管理</p>
+      </div>
       <el-form :model="form" label-position="top" @submit.prevent="onSubmit">
-        <el-form-item label="用户名"><el-input v-model="form.username" /></el-form-item>
-        <el-form-item label="密码"><el-input v-model="form.password" type="password" show-password /></el-form-item>
+        <el-form-item label="用户名"><el-input v-model="form.username" placeholder="请输入用户名" /></el-form-item>
+        <el-form-item label="密码"><el-input v-model="form.password" type="password" show-password placeholder="请输入密码" /></el-form-item>
         <el-button native-type="submit" type="primary" :loading="loading" style="width: 100%">登 录</el-button>
       </el-form>
     </el-card>
@@ -36,7 +40,33 @@ async function onSubmit() {
 </template>
 
 <style scoped>
-.login-wrap { height: 100vh; display: flex; align-items: center; justify-content: center; background: #f5f7fa; }
-.login-card { width: 360px; }
-.title { text-align: center; margin: 0 0 16px; }
+.login-wrap {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #2c2017 0%, #4a3628 55%, #b5803c 100%);
+}
+.login-card {
+  width: 380px;
+  border-radius: 12px;
+  border: none;
+}
+.brand {
+  text-align: center;
+  margin-bottom: 8px;
+}
+.brand-logo {
+  font-size: 40px;
+}
+.title {
+  margin: 8px 0 0;
+  color: #4a3628;
+  letter-spacing: 1px;
+}
+.subtitle {
+  margin: 4px 0 16px;
+  color: #b5803c;
+  font-size: 14px;
+}
 </style>

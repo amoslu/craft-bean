@@ -1,0 +1,29 @@
+/* craft-bean 暖咖主题 —— 覆盖 Element Plus 主色 */
+:root {
+  --el-color-primary: #b5803c;
+  --el-color-primary-light-3: #c79a66;
+  --el-color-primary-light-5: #d5b48c;
+  --el-color-primary-light-7: #e3cdb1;
+  --el-color-primary-light-8: #ebdbc5;
+  --el-color-primary-light-9: #f5ece0;
+  --el-color-primary-dark-2: #8e6530;
+
+  /* 品牌色（供自定义样式引用） */
+  --cb-coffee-deep: #2c2017;
+  --cb-coffee-mid: #4a3628;
+  --cb-coffee-accent: #e8b36b;
+  --cb-cream: #f7f3ec;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: var(--cb-cream);
+}
