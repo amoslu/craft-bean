@@ -1,0 +1,19 @@
+# java
+server/target/
+*.class
+
+# node
+node_modules/
+admin-web/dist/
+admin-web/node_modules/
+
+# env & ide
+.env
+.env.local
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# logs
+*.log
