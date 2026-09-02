@@ -1,5 +1,6 @@
 package com.craftbean.common;
 
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -21,6 +22,11 @@ public class GlobalExceptionHandler {
         FieldError fe = ex.getBindingResult().getFieldError();
         String msg = fe == null ? "参数校验失败" : fe.getField() + " " + fe.getDefaultMessage();
         return ResponseEntity.badRequest().body(Result.fail(400, msg));
+    }
+
+    @ExceptionHandler(DuplicateKeyException.class)
+    public ResponseEntity<Result<Void>> handleDuplicate(DuplicateKeyException ex) {
+        return ResponseEntity.badRequest().body(Result.fail(400, "数据已存在或唯一键冲突"));
     }
 
     @ExceptionHandler(Exception.class)
