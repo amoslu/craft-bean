@@ -1,0 +1,13 @@
+CREATE TABLE sys_user (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    username      VARCHAR(50)  NOT NULL,
+    password_hash VARCHAR(100) NOT NULL,
+    name          VARCHAR(50)  NOT NULL,
+    role          VARCHAR(20)  NOT NULL COMMENT 'ADMIN/STAFF/READONLY',
+    status        VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE/DISABLED',
+    last_login_at DATETIME     NULL,
+    created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted       TINYINT      NOT NULL DEFAULT 0,
+    UNIQUE KEY uk_username (username)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '系统用户';
