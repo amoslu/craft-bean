@@ -9,7 +9,8 @@ const routes = [
     children: [
       { path: '', redirect: '/dashboard' },
       { path: 'dashboard', component: () => import('../views/DashboardView.vue'), meta: { title: '工作台' } },
-      { path: 'system/users', component: () => import('../views/PlaceholderView.vue'), meta: { title: '用户管理', group: '系统管理' } },
+      { path: 'system/users', component: () => import('../views/system/UserManageView.vue'), meta: { title: '用户管理', group: '系统管理' } },
+      { path: 'system/audit', component: () => import('../views/system/AuditLogView.vue'), meta: { title: '操作日志', group: '系统管理' } },
       { path: 'archive/suppliers', component: () => import('../views/PlaceholderView.vue'), meta: { title: '供货商', group: '基础档案' } },
       { path: 'archive/customers', component: () => import('../views/PlaceholderView.vue'), meta: { title: '客户', group: '基础档案' } },
       { path: 'archive/green-bean', component: () => import('../views/PlaceholderView.vue'), meta: { title: '生豆品种', group: '基础档案' } },

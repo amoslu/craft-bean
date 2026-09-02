@@ -9,7 +9,10 @@ const auth = useAuthStore()
 
 const menus = [
   { index: '/dashboard', title: '工作台' },
-  { title: '系统管理', children: [{ path: '/system/users', label: '用户管理' }] },
+  { title: '系统管理', children: [
+    { path: '/system/users', label: '用户管理' },
+    { path: '/system/audit', label: '操作日志' }
+  ] },
   { title: '基础档案', children: [
     { path: '/archive/suppliers', label: '供货商' },
     { path: '/archive/customers', label: '客户' },
