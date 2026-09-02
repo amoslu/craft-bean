@@ -18,6 +18,8 @@ public class SysUser {
     private String role;
     private String status;
     private LocalDateTime lastLoginAt;
+    private Integer failedAttempts;
+    private LocalDateTime lockedUntil;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     @TableLogic
