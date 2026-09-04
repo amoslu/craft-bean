@@ -45,6 +45,11 @@ public class SecurityConfig {
                 res.setContentType(MediaType.APPLICATION_JSON_VALUE);
                 res.setCharacterEncoding("UTF-8");
                 res.getWriter().write(objectMapper.writeValueAsString(Result.fail(401, "未登录或登录已过期")));
+            }).accessDeniedHandler((req, res, ex) -> {
+                res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                res.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                res.setCharacterEncoding("UTF-8");
+                res.getWriter().write(objectMapper.writeValueAsString(Result.fail(403, "没有执行此操作的权限")));
             }))
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
