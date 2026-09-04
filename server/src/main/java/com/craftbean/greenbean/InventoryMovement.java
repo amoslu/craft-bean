@@ -2,7 +2,6 @@ package com.craftbean.greenbean;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -27,6 +26,4 @@ public class InventoryMovement {
     private LocalDate movementDate;
     private String remark;
     private LocalDateTime createdAt;
-    @TableLogic
-    private Integer deleted;
 }

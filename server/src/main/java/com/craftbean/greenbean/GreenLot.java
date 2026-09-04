@@ -2,7 +2,6 @@ package com.craftbean.greenbean;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -26,6 +25,4 @@ public class GreenLot {
     private String remark;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    @TableLogic
-    private Integer deleted;
 }
