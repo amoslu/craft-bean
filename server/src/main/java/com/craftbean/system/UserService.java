@@ -59,6 +59,7 @@ public class UserService {
         SysUser u = new SysUser();
         u.setUsername(req.getUsername());
         u.setName(req.getName());
+        u.setPhone(req.getPhone());
         u.setPasswordHash(encoder.encode(req.getPassword()));
         u.setRole(req.getRole());
         u.setStatus("ACTIVE");
@@ -79,6 +80,9 @@ public class UserService {
         }
         guardSelfAndLastAdmin(target, req.getRole(), req.getStatus(), operatorId);
         target.setName(req.getName());
+        if (StringUtils.hasText(req.getPhone())) {
+            target.setPhone(req.getPhone());
+        }
         target.setRole(req.getRole());
         target.setStatus(req.getStatus());
         userMapper.updateById(target);
@@ -142,7 +146,7 @@ public class UserService {
     }
 
     private UserResponse toResponse(SysUser u) {
-        return new UserResponse(u.getId(), u.getUsername(), u.getName(), u.getRole(),
+        return new UserResponse(u.getId(), u.getUsername(), u.getName(), u.getPhone(), u.getRole(),
                 u.getStatus(), u.getLastLoginAt(), u.getCreatedAt());
     }
 }

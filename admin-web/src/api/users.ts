@@ -4,6 +4,7 @@ export interface User {
   id: number
   username: string
   name: string
+  phone: string | null
   role: string
   status: string
   lastLoginAt: string | null
@@ -26,12 +27,12 @@ export async function listUsers(params: {
   return resp.data.data as PageResult<User>
 }
 
-export async function createUser(data: { username: string; name: string; password: string; role: string }): Promise<User> {
+export async function createUser(data: { username: string; name: string; phone: string; password: string; role: string }): Promise<User> {
   const resp = await http.post('/system/users', data)
   return resp.data.data as User
 }
 
-export async function updateUser(id: number, data: { name: string; role: string; status: string }): Promise<User> {
+export async function updateUser(id: number, data: { name: string; phone?: string; role: string; status: string }): Promise<User> {
   const resp = await http.put(`/system/users/${id}`, data)
   return resp.data.data as User
 }

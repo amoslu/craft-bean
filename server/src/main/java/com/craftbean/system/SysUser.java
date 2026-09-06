@@ -15,6 +15,7 @@ public class SysUser {
     private String username;
     private String passwordHash;
     private String name;
+    private String phone;
     private String role;
     private String status;
     private LocalDateTime lastLoginAt;

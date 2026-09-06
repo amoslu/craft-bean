@@ -12,8 +12,8 @@ export interface LoginResult {
   user: CurrentUser
 }
 
-export async function loginApi(username: string, password: string): Promise<LoginResult> {
-  const resp = await http.post('/auth/login', { username, password })
+export async function loginApi(username: string, password: string, phoneTail: string): Promise<LoginResult> {
+  const resp = await http.post('/auth/login', { username, password, phoneTail })
   return resp.data.data as LoginResult
 }
 

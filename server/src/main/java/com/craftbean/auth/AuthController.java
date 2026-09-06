@@ -47,14 +47,11 @@ public class AuthController {
         if (!"ACTIVE".equals(user.getStatus())) {
             throw AppException.unauthorized("账号已停用");
         }
-        if (!encoder.matches(req.getPassword(), user.getPasswordHash())) {
-            int failed = (user.getFailedAttempts() == null ? 0 : user.getFailedAttempts()) + 1;
-            user.setFailedAttempts(failed);
-            if (failed >= MAX_FAILED_ATTEMPTS) {
-                user.setLockedUntil(now.plusMinutes(15));
-                user.setFailedAttempts(0);
-            }
-            userMapper.updateById(user);
+        // 三要素：密码 + 手机号后四位。任一不符都走同一条失败计数/文案，避免泄露哪一环失败。
+        boolean passwordOk = encoder.matches(req.getPassword(), user.getPasswordHash());
+        boolean tailOk = expectedTail(user.getPhone()).equals(req.getPhoneTail());
+        if (!passwordOk || !tailOk) {
+            recordFailedAttempt(user, now);
             throw AppException.unauthorized("用户名或密码错误");
         }
 
@@ -67,6 +64,25 @@ public class AuthController {
         CurrentUserResponse cur = new CurrentUserResponse(user.getId(), user.getUsername(), user.getName(), user.getRole());
         auditService.record(user.getId(), "LOGIN", user.getUsername(), "登录成功");
         return Result.ok(new LoginResponse(token, cur));
+    }
+
+    /** 期望尾号：有手机号取末4位；无手机号（存量兜底）为 0000。 */
+    private static String expectedTail(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return "0000";
+        }
+        return phone.substring(Math.max(0, phone.length() - 4));
+    }
+
+    /** 密码/尾号任一失败：累计失败次数，达阈值锁 15 分钟并清零计数。 */
+    private void recordFailedAttempt(SysUser user, LocalDateTime now) {
+        int failed = (user.getFailedAttempts() == null ? 0 : user.getFailedAttempts()) + 1;
+        user.setFailedAttempts(failed);
+        if (failed >= MAX_FAILED_ATTEMPTS) {
+            user.setLockedUntil(now.plusMinutes(15));
+            user.setFailedAttempts(0);
+        }
+        userMapper.updateById(user);
     }
 
     @GetMapping("/me")

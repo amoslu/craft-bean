@@ -3,6 +3,15 @@ import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listUsers, createUser, updateUser, resetPassword, deleteUser, type User } from '../../api/users'
 
+const PHONE_RE = /^1\d{10}$/
+const PWD_RE = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/
+const PWD_TIP = '密码至少8位，且须同时包含字母、数字与特殊符号'
+
+function errMsg(e: unknown): string {
+  const resp = (e as { response?: { data?: { message?: string } } }).response
+  return resp?.data?.message || '操作失败'
+}
+
 const loading = ref(false)
 const list = ref<User[]>([])
 const total = ref(0)
@@ -46,53 +55,84 @@ function search() {
 // 新增/编辑弹窗
 const dialogVisible = ref(false)
 const editingId = ref<number | null>(null)
-const form = reactive({ username: '', name: '', password: '', role: 'STAFF', status: 'ACTIVE' })
+const form = reactive({ username: '', name: '', phone: '', password: '', role: 'STAFF', status: 'ACTIVE' })
 
 function openCreate() {
   editingId.value = null
-  Object.assign(form, { username: '', name: '', password: '', role: 'STAFF', status: 'ACTIVE' })
+  Object.assign(form, { username: '', name: '', phone: '', password: '', role: 'STAFF', status: 'ACTIVE' })
   dialogVisible.value = true
 }
 
 function openEdit(row: User) {
   editingId.value = row.id
-  Object.assign(form, { username: row.username, name: row.name, password: '', role: row.role, status: row.status })
+  Object.assign(form, { username: row.username, name: row.name, phone: row.phone ?? '', password: '', role: row.role, status: row.status })
   dialogVisible.value = true
 }
 
 async function submit() {
   if (editingId.value == null) {
-    await createUser({ username: form.username, name: form.name, password: form.password, role: form.role })
-    ElMessage.success('已创建')
-  } else {
-    await updateUser(editingId.value, { name: form.name, role: form.role, status: form.status })
-    ElMessage.success('已保存')
+    if (!PHONE_RE.test(form.phone)) {
+      ElMessage.warning('新建用户须填写合法手机号')
+      return
+    }
+    if (!PWD_RE.test(form.password)) {
+      ElMessage.warning(PWD_TIP)
+      return
+    }
+  } else if (form.phone && !PHONE_RE.test(form.phone)) {
+    ElMessage.warning('手机号格式不正确')
+    return
   }
-  dialogVisible.value = false
-  load()
+  try {
+    if (editingId.value == null) {
+      await createUser({ username: form.username, name: form.name, phone: form.phone, password: form.password, role: form.role })
+      ElMessage.success('已创建')
+    } else {
+      await updateUser(editingId.value, { name: form.name, phone: form.phone || undefined, role: form.role, status: form.status })
+      ElMessage.success('已保存')
+    }
+    dialogVisible.value = false
+    load()
+  } catch (e) {
+    ElMessage.error(errMsg(e))
+  }
 }
 
 async function onResetPassword(row: User) {
-  const { value } = await ElMessageBox.prompt(`为「${row.name}」设置新密码`, '重置密码', {
-    inputType: 'password',
-    inputValidator: (v) => (v && v.length >= 6) || '密码至少 6 位'
-  })
-  await resetPassword(row.id, value)
-  ElMessage.success('已重置密码')
+  try {
+    const { value } = await ElMessageBox.prompt(`为「${row.name}」设置新密码`, '重置密码', {
+      inputType: 'password',
+      inputValidator: (v) => (v && PWD_RE.test(v)) || PWD_TIP
+    })
+    await resetPassword(row.id, value)
+    ElMessage.success('已重置密码')
+  } catch (e) {
+    if (e === 'cancel' || e === 'close') return
+    ElMessage.error(errMsg(e))
+  }
 }
 
 async function onDelete(row: User) {
-  await ElMessageBox.confirm(`确认删除用户「${row.name}」？`, '删除', { type: 'warning' })
-  await deleteUser(row.id)
-  ElMessage.success('已删除')
-  load()
+  try {
+    await ElMessageBox.confirm(`确认删除用户「${row.name}」？`, '删除', { type: 'warning' })
+    await deleteUser(row.id)
+    ElMessage.success('已删除')
+    load()
+  } catch (e) {
+    if (e === 'cancel' || e === 'close') return
+    ElMessage.error(errMsg(e))
+  }
 }
 
 async function toggleStatus(row: User) {
   const next = row.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE'
-  await updateUser(row.id, { name: row.name, role: row.role, status: next })
-  ElMessage.success(next === 'ACTIVE' ? '已启用' : '已停用')
-  load()
+  try {
+    await updateUser(row.id, { name: row.name, phone: row.phone || undefined, role: row.role, status: next })
+    ElMessage.success(next === 'ACTIVE' ? '已启用' : '已停用')
+    load()
+  } catch (e) {
+    ElMessage.error(errMsg(e))
+  }
 }
 
 onMounted(load)
@@ -115,6 +155,12 @@ onMounted(load)
     <el-table v-loading="loading" :data="list" border>
       <el-table-column prop="username" label="用户名" width="140" />
       <el-table-column prop="name" label="姓名" width="120" />
+      <el-table-column label="手机号" width="130">
+        <template #default="{ row }">
+          <span v-if="row.phone">{{ row.phone }}</span>
+          <el-tag v-else type="info" size="small">未绑定(登录尾号0000)</el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="角色" width="100">
         <template #default="{ row }">
           <el-tag :type="row.role === 'ADMIN' ? 'danger' : 'primary'">{{ roleMap[row.role] || row.role }}</el-tag>
@@ -154,8 +200,15 @@ onMounted(load)
           <el-input v-model="form.username" :disabled="editingId != null" />
         </el-form-item>
         <el-form-item label="姓名"><el-input v-model="form.name" /></el-form-item>
+        <el-form-item :label="'手机号'">
+          <el-input
+            v-model="form.phone"
+            maxlength="11"
+            :placeholder="editingId == null ? '必填' : '留空则不修改（未设置账号尾号默认 0000）'"
+          />
+        </el-form-item>
         <el-form-item v-if="editingId == null" label="密码">
-          <el-input v-model="form.password" type="password" show-password />
+          <el-input v-model="form.password" type="password" show-password :placeholder="PWD_TIP" />
         </el-form-item>
         <el-form-item label="角色">
           <el-select v-model="form.role" style="width: 100%">

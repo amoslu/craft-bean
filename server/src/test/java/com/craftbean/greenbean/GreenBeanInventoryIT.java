@@ -21,7 +21,7 @@ class GreenBeanInventoryIT {
     @Test
     @SuppressWarnings("unchecked")
     void purchaseCreatesLotAndMovementAndRejectsDisabledSupplierAndReadonlyWrite() {
-        HttpHeaders admin = headers("admin", "admin123");
+        HttpHeaders admin = headers("admin", "Admin@123456");
         String suffix = String.valueOf(System.currentTimeMillis());
         Map<String, Object> supplierBody = Map.of("name", "IT供货商-" + suffix, "status", "ACTIVE");
         Map<String, Object> supplier = data(rest.exchange("/api/v1/archive/suppliers", HttpMethod.POST,
@@ -58,8 +58,8 @@ class GreenBeanInventoryIT {
         String readonlyName = "it_ro_" + suffix;
         rest.exchange("/api/v1/system/users", HttpMethod.POST,
                 new HttpEntity<>(Map.of("username", readonlyName, "name", "只读测试",
-                        "password", "readonly123", "role", "READONLY"), admin), Map.class);
-        HttpHeaders readonly = headers(readonlyName, "readonly123");
+                        "password", "Read@1234", "role", "READONLY", "phone", "13900000000"), admin), Map.class);
+        HttpHeaders readonly = headers(readonlyName, "Read@1234");
         ResponseEntity<Map> denied = rest.exchange("/api/v1/archive/suppliers", HttpMethod.POST,
                 new HttpEntity<>(Map.of("name", "readonly-" + suffix), readonly), Map.class);
         assertThat(denied.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
@@ -73,7 +73,7 @@ class GreenBeanInventoryIT {
     @SuppressWarnings("unchecked")
     private HttpHeaders headers(String username, String password) {
         ResponseEntity<Map> login = rest.postForEntity("/api/v1/auth/login",
-                Map.of("username", username, "password", password), Map.class);
+                Map.of("username", username, "password", password, "phoneTail", "0000"), Map.class);
         String token = (String) ((Map<String, Object>) login.getBody().get("data")).get("token");
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);

@@ -20,8 +20,9 @@ class UserControllerIT {
     TestRestTemplate rest;
 
     @SuppressWarnings("unchecked")
-    private String login(String username, String password) {
-        HttpEntity<Map<String, String>> body = new HttpEntity<>(Map.of("username", username, "password", password));
+    private String login(String username, String password, String phoneTail) {
+        HttpEntity<Map<String, String>> body = new HttpEntity<>(Map.of(
+                "username", username, "password", password, "phoneTail", phoneTail));
         ResponseEntity<Map> resp = rest.postForEntity("/api/v1/auth/login", body, Map.class);
         Map<String, Object> data = (Map<String, Object>) resp.getBody().get("data");
         return (String) data.get("token");
@@ -29,7 +30,7 @@ class UserControllerIT {
 
     private HttpHeaders adminHeaders() {
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(login("admin", "admin123"));
+        headers.setBearerAuth(login("admin", "Admin@123456", "0000"));
         return headers;
     }
 
@@ -51,13 +52,15 @@ class UserControllerIT {
         HttpHeaders admin = adminHeaders();
         String username = "it_u_" + System.currentTimeMillis();
 
-        // create
-        Map<String, String> createBody = Map.of("username", username, "name", "测试", "password", "pass123", "role", "STAFF");
+        // create（手机号必填 + 强密码）
+        Map<String, String> createBody = Map.of("username", username, "name", "测试", "password", "Pass@1234",
+                "role", "STAFF", "phone", "13800138000");
         ResponseEntity<Map> createResp = rest.exchange("/api/v1/system/users", HttpMethod.POST,
                 new HttpEntity<>(createBody, admin), Map.class);
         assertThat(createResp.getStatusCode()).isEqualTo(HttpStatus.OK);
         Map<String, Object> created = (Map<String, Object>) createResp.getBody().get("data");
         Integer id = (Integer) created.get("id");
+        assertThat(created.get("phone")).isEqualTo("13800138000");
 
         // update role
         Map<String, String> updateBody = Map.of("name", "测试2", "role", "READONLY", "status", "ACTIVE");
@@ -66,14 +69,14 @@ class UserControllerIT {
         assertThat(updateResp.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(((Map<String, Object>) updateResp.getBody().get("data")).get("role")).isEqualTo("READONLY");
 
-        // reset password
-        Map<String, String> resetBody = Map.of("newPassword", "newpass456");
+        // reset password（新密码同样须满足强密码策略）
+        Map<String, String> resetBody = Map.of("newPassword", "NewPass@456");
         ResponseEntity<Map> resetResp = rest.exchange("/api/v1/system/users/" + id + "/reset-password",
                 HttpMethod.POST, new HttpEntity<>(resetBody, admin), Map.class);
         assertThat(resetResp.getStatusCode()).isEqualTo(HttpStatus.OK);
 
-        // login with new password works
-        assertThat(login(username, "newpass456")).isNotBlank();
+        // login with new password works（该用户有手机号，尾号须为 13800138000 的末四位 8000）
+        assertThat(login(username, "NewPass@456", "8000")).isNotBlank();
 
         // delete
         ResponseEntity<Map> delResp = rest.exchange("/api/v1/system/users/" + id, HttpMethod.DELETE,
@@ -108,5 +111,47 @@ class UserControllerIT {
                 new HttpEntity<>(updateBody, admin), Map.class);
         assertThat(updResp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(updResp.getBody().get("message")).isEqualTo("不能停用自己");
+    }
+
+    @Test
+    void createUserWithoutPhoneRejected() {
+        HttpHeaders admin = adminHeaders();
+        String username = "nophone_" + System.currentTimeMillis();
+        Map<String, String> body = Map.of("username", username, "name", "无手机号",
+                "password", "Pass@1234", "role", "STAFF");
+        ResponseEntity<Map> resp = rest.exchange("/api/v1/system/users", HttpMethod.POST,
+                new HttpEntity<>(body, admin), Map.class);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void createRejectsWeakPasswords() {
+        HttpHeaders admin = adminHeaders();
+        String[] weak = {"abcdefgh", "12345678", "abc12345", "a1!"}; // 缺特殊/缺字母/缺数字/过短
+        for (int i = 0; i < weak.length; i++) {
+            String username = "weak_" + System.nanoTime() + "_" + i;
+            Map<String, String> body = Map.of("username", username, "name", "弱密码",
+                    "password", weak[i], "role", "STAFF", "phone", "13800138000");
+            ResponseEntity<Map> resp = rest.exchange("/api/v1/system/users", HttpMethod.POST,
+                    new HttpEntity<>(body, admin), Map.class);
+            assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void resetPasswordRejectsWeakPassword() {
+        HttpHeaders admin = adminHeaders();
+        String username = "rpweak_" + System.currentTimeMillis();
+        Map<String, String> createBody = Map.of("username", username, "name", "重置弱密码测试",
+                "password", "Pass@1234", "role", "STAFF", "phone", "13800138000");
+        ResponseEntity<Map> createResp = rest.exchange("/api/v1/system/users", HttpMethod.POST,
+                new HttpEntity<>(createBody, admin), Map.class);
+        Integer id = (Integer) ((Map<String, Object>) createResp.getBody().get("data")).get("id");
+
+        Map<String, String> weakReset = Map.of("newPassword", "abcdefgh");
+        ResponseEntity<Map> resetResp = rest.exchange("/api/v1/system/users/" + id + "/reset-password",
+                HttpMethod.POST, new HttpEntity<>(weakReset, admin), Map.class);
+        assertThat(resetResp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 }

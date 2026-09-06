@@ -77,10 +77,10 @@ class SupplierDeleteIT {
         String staffName = "it_staff_" + suffix;
         rest.exchange("/api/v1/system/users", HttpMethod.POST,
                 new HttpEntity<>(Map.of("username", staffName, "name", "员工测试",
-                        "password", "staff123", "role", "STAFF"), admin), Map.class);
+                        "password", "Staff@1234", "role", "STAFF", "phone", "13900000000"), admin), Map.class);
 
         ResponseEntity<Map> resp = rest.exchange("/api/v1/archive/suppliers/" + supplierId,
-                HttpMethod.DELETE, new HttpEntity<>(login(staffName, "staff123")), Map.class);
+                HttpMethod.DELETE, new HttpEntity<>(login(staffName, "Staff@1234")), Map.class);
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
 
         // 仍未被删除
@@ -116,13 +116,13 @@ class SupplierDeleteIT {
 
     @SuppressWarnings("unchecked")
     private HttpHeaders admin() {
-        return login("admin", "admin123");
+        return login("admin", "Admin@123456");
     }
 
     @SuppressWarnings("unchecked")
     private HttpHeaders login(String username, String password) {
         ResponseEntity<Map> login = rest.postForEntity("/api/v1/auth/login",
-                Map.of("username", username, "password", password), Map.class);
+                Map.of("username", username, "password", password, "phoneTail", "0000"), Map.class);
         String token = (String) ((Map<String, Object>) login.getBody().get("data")).get("token");
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);

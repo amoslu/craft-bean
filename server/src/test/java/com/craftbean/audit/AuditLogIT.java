@@ -27,7 +27,8 @@ class AuditLogIT {
 
     @SuppressWarnings("unchecked")
     private String login(String username, String password) {
-        HttpEntity<Map<String, String>> body = new HttpEntity<>(Map.of("username", username, "password", password));
+        HttpEntity<Map<String, String>> body = new HttpEntity<>(Map.of(
+                "username", username, "password", password, "phoneTail", "0000"));
         ResponseEntity<Map> resp = rest.postForEntity("/api/v1/auth/login", body, Map.class);
         Map<String, Object> data = (Map<String, Object>) resp.getBody().get("data");
         return (String) data.get("token");

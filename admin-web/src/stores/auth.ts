@@ -6,8 +6,8 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string>(localStorage.getItem('craftbean_token') || '')
   const user = ref<CurrentUser | null>(null)
 
-  async function login(username: string, password: string) {
-    const result = await loginApi(username, password)
+  async function login(username: string, password: string, phoneTail: string) {
+    const result = await loginApi(username, password, phoneTail)
     token.value = result.token
     user.value = result.user
     localStorage.setItem('craftbean_token', result.token)

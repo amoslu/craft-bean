@@ -6,6 +6,7 @@ public record UserResponse(
         Long id,
         String username,
         String name,
+        String phone,
         String role,
         String status,
         LocalDateTime lastLoginAt,

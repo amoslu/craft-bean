@@ -6,13 +6,19 @@ import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
-const form = reactive({ username: 'admin', password: 'admin123' })
+const form = reactive({ username: 'admin', password: 'Admin@123456', phoneTail: '0000' })
 const loading = ref(false)
 
+const phoneTailPattern = /^\d{4}$/
+
 async function onSubmit() {
+  if (!phoneTailPattern.test(form.phoneTail)) {
+    ElMessage.error('手机号后四位须为4位数字')
+    return
+  }
   loading.value = true
   try {
-    await auth.login(form.username, form.password)
+    await auth.login(form.username, form.password, form.phoneTail)
     router.push('/dashboard')
   } catch {
     ElMessage.error('用户名或密码错误')
@@ -33,6 +39,15 @@ async function onSubmit() {
       <el-form :model="form" label-position="top" @submit.prevent="onSubmit">
         <el-form-item label="用户名"><el-input v-model="form.username" placeholder="请输入用户名" /></el-form-item>
         <el-form-item label="密码"><el-input v-model="form.password" type="password" show-password placeholder="请输入密码" /></el-form-item>
+        <el-form-item label="手机号后四位">
+          <el-input
+            v-model="form.phoneTail"
+            maxlength="4"
+            placeholder="未绑定手机号账号默认 0000"
+            inputmode="numeric"
+            @input="(v: string) => (form.phoneTail = v.replace(/\D/g, ''))"
+          />
+        </el-form-item>
         <el-button native-type="submit" type="primary" :loading="loading" style="width: 100%">登 录</el-button>
       </el-form>
     </el-card>
