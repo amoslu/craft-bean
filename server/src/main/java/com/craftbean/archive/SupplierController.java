@@ -53,4 +53,11 @@ public class SupplierController {
         if (next == null && body != null) next = body.get("status");
         return Result.ok(service.changeStatus(id, next, CurrentUser.get().getId()));
     }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<Void> delete(@PathVariable Long id) {
+        service.delete(id, CurrentUser.get().getId());
+        return Result.ok(null);
+    }
 }

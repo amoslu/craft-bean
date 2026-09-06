@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import { listSuppliers, createSupplier, updateSupplier, changeSupplierStatus, type Supplier } from '../../api/archive'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { listSuppliers, createSupplier, updateSupplier, changeSupplierStatus, deleteSupplier, type Supplier } from '../../api/archive'
+import { useAuthStore } from '../../stores/auth'
 
 const loading = ref(false), list = ref<Supplier[]>([]), total = ref(0)
 const query = reactive({ keyword: '', status: '', page: 1, size: 20 })
 const dialogVisible = ref(false), editingId = ref<number | null>(null)
 const form = reactive<Partial<Supplier>>({ name: '', contactPerson: '', phone: '', wechat: '', address: '', mainCategory: '', status: 'ACTIVE' })
 const statusMap: Record<string, string> = { ACTIVE: '合作中', DISABLED: '停用' }
+const auth = useAuthStore()
+const isAdmin = computed(() => auth.user?.role === 'ADMIN')
 
 async function load() {
   loading.value = true
@@ -23,6 +26,18 @@ async function submit() {
   ElMessage.success('已保存'); dialogVisible.value = false; load()
 }
 async function toggle(row: Supplier) { await changeSupplierStatus(row.id, row.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE'); ElMessage.success('状态已更新'); load() }
+async function onDelete(row: Supplier) {
+  try {
+    await ElMessageBox.confirm(`确认删除供货商「${row.name}」？`, '删除', { type: 'warning' })
+  } catch { return }
+  try {
+    await deleteSupplier(row.id)
+    ElMessage.success('已删除'); load()
+  } catch (err) {
+    const data = (err as { response?: { data?: { message?: string } } })?.response?.data
+    ElMessage.error(data?.message || '删除失败')
+  }
+}
 onMounted(load)
 </script>
 
@@ -39,7 +54,11 @@ onMounted(load)
       <el-table-column prop="name" label="名称" min-width="160" /><el-table-column prop="contactPerson" label="联系人" width="120" />
       <el-table-column prop="phone" label="电话" width="140" /><el-table-column prop="mainCategory" label="主营品类" />
       <el-table-column label="状态" width="100"><template #default="{ row }"><el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">{{ statusMap[row.status] }}</el-tag></template></el-table-column>
-      <el-table-column label="操作" width="160"><template #default="{ row }"><el-button size="small" @click="openEdit(row)">编辑</el-button><el-button size="small" :type="row.status === 'ACTIVE' ? 'warning' : 'success'" @click="toggle(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button></template></el-table-column>
+      <el-table-column label="操作" width="230"><template #default="{ row }">
+        <el-button size="small" @click="openEdit(row)">编辑</el-button>
+        <el-button size="small" :type="row.status === 'ACTIVE' ? 'warning' : 'success'" @click="toggle(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button>
+        <el-button v-if="isAdmin" size="small" type="danger" @click="onDelete(row)">删除</el-button>
+      </template></el-table-column>
     </el-table>
     <el-pagination class="pager" layout="total, prev, pager, next" :total="total" :page-size="query.size" :current-page="query.page" @current-change="(p: number) => { query.page = p; load() }" />
     <el-dialog v-model="dialogVisible" :title="editingId == null ? '新增供货商' : '编辑供货商'" width="460px">

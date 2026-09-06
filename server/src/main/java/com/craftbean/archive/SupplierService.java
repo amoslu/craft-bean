@@ -6,6 +6,10 @@ import com.craftbean.audit.AuditService;
 import com.craftbean.archive.dto.SupplierRequest;
 import com.craftbean.common.AppException;
 import com.craftbean.common.PageResult;
+import com.craftbean.greenbean.GreenLot;
+import com.craftbean.greenbean.GreenLotMapper;
+import com.craftbean.greenbean.InventoryMovement;
+import com.craftbean.greenbean.InventoryMovementMapper;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,10 +20,18 @@ public class SupplierService {
     private static final String ACTIVE = "ACTIVE";
     private static final String DISABLED = "DISABLED";
     private final SupplierMapper mapper;
+    private final GreenLotMapper lotMapper;
+    private final InventoryMovementMapper movementMapper;
+    private final GreenBeanMapper beanMapper;
     private final AuditService auditService;
 
-    public SupplierService(SupplierMapper mapper, AuditService auditService) {
+    public SupplierService(SupplierMapper mapper, GreenLotMapper lotMapper,
+                           InventoryMovementMapper movementMapper, GreenBeanMapper beanMapper,
+                           AuditService auditService) {
         this.mapper = mapper;
+        this.lotMapper = lotMapper;
+        this.movementMapper = movementMapper;
+        this.beanMapper = beanMapper;
         this.auditService = auditService;
     }
 
@@ -67,6 +79,22 @@ public class SupplierService {
         mapper.updateById(s);
         auditService.record(operatorId, "SUPPLIER_STATUS", s.getName(), "供货商状态=" + status);
         return s;
+    }
+
+    @Transactional
+    public void delete(Long id, Long operatorId) {
+        Supplier s = require(id);
+        Long lotCount = lotMapper.selectCount(
+                new LambdaQueryWrapper<GreenLot>().eq(GreenLot::getSupplierId, id));
+        if (lotCount > 0) throw new AppException(400, 400, "该供货商已有生豆采购入库，不能删除");
+        Long movementCount = movementMapper.selectCount(
+                new LambdaQueryWrapper<InventoryMovement>().eq(InventoryMovement::getSupplierId, id));
+        if (movementCount > 0) throw new AppException(400, 400, "该供货商已有库存流水，不能删除");
+        Long beanCount = beanMapper.selectCount(
+                new LambdaQueryWrapper<GreenBean>().eq(GreenBean::getDefaultSupplierId, id));
+        if (beanCount > 0) throw new AppException(400, 400, "该供货商被生豆品种设为默认供货商，不能删除");
+        mapper.deleteById(id);
+        auditService.record(operatorId, "SUPPLIER_DELETE", s.getName(), "删除供货商 " + s.getName());
     }
 
     public Supplier require(Long id) {

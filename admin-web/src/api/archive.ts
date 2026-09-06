@@ -23,6 +23,9 @@ export async function updateSupplier(id: number, data: Partial<Supplier>): Promi
 export async function changeSupplierStatus(id: number, status: string): Promise<Supplier> {
   const resp = await http.post(`/archive/suppliers/${id}/status`, null, { params: { status } }); return resp.data.data
 }
+export async function deleteSupplier(id: number): Promise<void> {
+  await http.delete(`/archive/suppliers/${id}`)
+}
 
 export async function listGreenBeans(params: { keyword?: string; status?: string; page: number; size: number }): Promise<PageResult<GreenBean>> {
   const resp = await http.get('/archive/green-beans', { params }); return resp.data.data
