@@ -231,6 +231,7 @@ erDiagram
 | `name` | VARCHAR(100) | 否 | — | 名称，唯一 `uk_supplier_name` |
 | `contact_person` | VARCHAR(50) | 是 | — | 联系人 |
 | `phone` | VARCHAR(30) | 是 | — | 电话 |
+| `wechat` | VARCHAR(50) | 是 | — | 微信 |
 | `address` | VARCHAR(255) | 是 | — | 地址 |
 | `main_category` | VARCHAR(100) | 是 | — | 主营品类 |
 | `status` | VARCHAR(20) | 否 | `ACTIVE` | `ACTIVE`/`DISABLED` 合作中/停用 |

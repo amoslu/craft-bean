@@ -6,7 +6,7 @@ import { listSuppliers, createSupplier, updateSupplier, changeSupplierStatus, ty
 const loading = ref(false), list = ref<Supplier[]>([]), total = ref(0)
 const query = reactive({ keyword: '', status: '', page: 1, size: 20 })
 const dialogVisible = ref(false), editingId = ref<number | null>(null)
-const form = reactive<Partial<Supplier>>({ name: '', contactPerson: '', phone: '', address: '', mainCategory: '', status: 'ACTIVE' })
+const form = reactive<Partial<Supplier>>({ name: '', contactPerson: '', phone: '', wechat: '', address: '', mainCategory: '', status: 'ACTIVE' })
 const statusMap: Record<string, string> = { ACTIVE: '合作中', DISABLED: '停用' }
 
 async function load() {
@@ -15,7 +15,7 @@ async function load() {
   finally { loading.value = false }
 }
 function search() { query.page = 1; load() }
-function openCreate() { editingId.value = null; Object.assign(form, { name: '', contactPerson: '', phone: '', address: '', mainCategory: '', status: 'ACTIVE' }); dialogVisible.value = true }
+function openCreate() { editingId.value = null; Object.assign(form, { name: '', contactPerson: '', phone: '', wechat: '', address: '', mainCategory: '', status: 'ACTIVE' }); dialogVisible.value = true }
 function openEdit(row: Supplier) { editingId.value = row.id; Object.assign(form, row); dialogVisible.value = true }
 async function submit() {
   if (!form.name?.trim()) return ElMessage.warning('请输入供货商名称')
@@ -43,7 +43,7 @@ onMounted(load)
     </el-table>
     <el-pagination class="pager" layout="total, prev, pager, next" :total="total" :page-size="query.size" :current-page="query.page" @current-change="(p: number) => { query.page = p; load() }" />
     <el-dialog v-model="dialogVisible" :title="editingId == null ? '新增供货商' : '编辑供货商'" width="460px">
-      <el-form :model="form" label-width="90px"><el-form-item label="名称"><el-input v-model="form.name" /></el-form-item><el-form-item label="联系人"><el-input v-model="form.contactPerson" /></el-form-item><el-form-item label="电话"><el-input v-model="form.phone" /></el-form-item><el-form-item label="地址"><el-input v-model="form.address" /></el-form-item><el-form-item label="主营品类"><el-input v-model="form.mainCategory" /></el-form-item><el-form-item label="状态"><el-select v-model="form.status"><el-option label="合作中" value="ACTIVE" /><el-option label="停用" value="DISABLED" /></el-select></el-form-item></el-form>
+      <el-form :model="form" label-width="90px"><el-form-item label="名称"><el-input v-model="form.name" /></el-form-item><el-form-item label="联系人"><el-input v-model="form.contactPerson" /></el-form-item><el-form-item label="电话"><el-input v-model="form.phone" /></el-form-item><el-form-item label="微信"><el-input v-model="form.wechat" /></el-form-item><el-form-item label="地址"><el-input v-model="form.address" /></el-form-item><el-form-item label="主营品类"><el-input v-model="form.mainCategory" /></el-form-item><el-form-item label="状态"><el-select v-model="form.status"><el-option label="合作中" value="ACTIVE" /><el-option label="停用" value="DISABLED" /></el-select></el-form-item></el-form>
       <template #footer><el-button @click="dialogVisible = false">取消</el-button><el-button type="primary" @click="submit">保存</el-button></template>
     </el-dialog>
   </el-card>

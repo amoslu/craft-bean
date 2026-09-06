@@ -85,6 +85,7 @@ public class SupplierService {
         s.setName(req.getName());
         s.setContactPerson(req.getContactPerson());
         s.setPhone(req.getPhone());
+        s.setWechat(req.getWechat());
         s.setAddress(req.getAddress());
         s.setMainCategory(req.getMainCategory());
         s.setStatus(StringUtils.hasText(req.getStatus()) ? req.getStatus() : ACTIVE);

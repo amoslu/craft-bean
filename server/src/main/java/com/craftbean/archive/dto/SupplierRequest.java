@@ -8,6 +8,7 @@ public class SupplierRequest {
     @NotBlank private String name;
     private String contactPerson;
     private String phone;
+    private String wechat;
     private String address;
     private String mainCategory;
     private String status;

@@ -2,7 +2,7 @@ import http from './http'
 
 export interface PageResult<T> { list: T[]; total: number }
 export interface Supplier {
-  id: number; name: string; contactPerson?: string; phone?: string; address?: string
+  id: number; name: string; contactPerson?: string; phone?: string; wechat?: string; address?: string
   mainCategory?: string; status: string; createdAt?: string; updatedAt?: string
 }
 export interface GreenBean {
