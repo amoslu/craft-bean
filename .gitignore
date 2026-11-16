@@ -17,3 +17,6 @@ admin-web/node_modules/
 
 # logs
 *.log
+
+# local dev runtime state (scripts/dev.sh)
+.dev/
