@@ -37,7 +37,9 @@ class UserControllerIT {
     @Test
     @SuppressWarnings("unchecked")
     void listUsersReturnsAdmin() {
-        ResponseEntity<Map> resp = rest.exchange("/api/v1/system/users?page=1&size=50",
+        // 按 keyword 精确定位 admin：开发库会累积历次测试建的用户，
+        // 靠 page=1 翻到 admin 会随数据量增多而失败
+        ResponseEntity<Map> resp = rest.exchange("/api/v1/system/users?keyword=admin&page=1&size=50",
                 HttpMethod.GET, new HttpEntity<>(adminHeaders()), Map.class);
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
         Map<String, Object> data = (Map<String, Object>) resp.getBody().get("data");
