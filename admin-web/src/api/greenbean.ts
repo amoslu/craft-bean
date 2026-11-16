@@ -17,6 +17,10 @@ export interface PurchaseRequest {
 export async function purchase(data: PurchaseRequest): Promise<GreenLot> {
   const resp = await http.post('/greenbean/purchases', data); return resp.data.data
 }
+/** 作废批次：单据留档不物理删除，未领用部分由反向流水冲销。仅管理员。 */
+export async function voidLot(id: number, reason?: string): Promise<GreenLot> {
+  const resp = await http.post(`/greenbean/lots/${id}/void`, { reason }); return resp.data.data
+}
 export async function listLots(params: {
   keyword?: string; status?: string; supplierId?: number; greenBeanId?: number; page: number; size: number
 }): Promise<PageResult<GreenLot>> {

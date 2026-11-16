@@ -28,6 +28,7 @@ import org.springframework.util.StringUtils;
 @Service
 public class PurchaseService {
     private static final BigDecimal ZERO = BigDecimal.ZERO;
+    private static final String DELETED_LABEL = "(已删除)";
     private final GreenLotMapper lotMapper;
     private final InventoryMovementMapper movementMapper;
     private final SupplierMapper supplierMapper;
@@ -56,8 +57,8 @@ public class PurchaseService {
         if (supplier == null) throw new AppException(404, 404, "供货商不存在");
         if (!"ACTIVE".equals(supplier.getStatus())) throw new AppException(400, 400, "供货商已停用，不能采购");
         GreenBean bean = beanMapper.selectById(req.getGreenBeanId());
-        if (bean == null) throw new AppException(404, 404, "生豆品种不存在");
-        if (!"ACTIVE".equals(bean.getStatus())) throw new AppException(400, 400, "生豆品种已停用，不能采购");
+        if (bean == null) throw new AppException(404, 404, "生豆不存在");
+        if (!"ACTIVE".equals(bean.getStatus())) throw new AppException(400, 400, "生豆已停用，不能采购");
 
         String lotNo = StringUtils.hasText(req.getLotNo()) ? req.getLotNo().trim() : generateLotNo();
         if (lotMapper.selectOne(new LambdaQueryWrapper<GreenLot>().eq(GreenLot::getLotNo, lotNo)) != null) {
@@ -101,6 +102,46 @@ public class PurchaseService {
         return toLotResponse(lot, bean, supplier);
     }
 
+    /**
+     * 作废批次。单据不物理删除，改 status=VOID；未领用部分追加一条反向流水把台账冲平，
+     * 已领用部分保留历史（remaining_kg 也不置零，保留作废时的现场）。
+     */
+    @Transactional
+    public GreenLotResponse voidLot(Long lotId, String reason, Long operatorId) {
+        GreenLot lot = lotMapper.selectById(lotId);
+        if (lot == null) throw new AppException(404, 404, "批次不存在");
+        if ("VOID".equals(lot.getStatus())) throw new AppException(400, 400, "该批次已作废");
+
+        lot.setStatus("VOID");
+        lotMapper.updateById(lot);
+
+        BigDecimal remaining = lot.getRemainingKg() == null ? ZERO : lot.getRemainingKg();
+        if (remaining.compareTo(ZERO) > 0) {
+            BigDecimal costPrice = lot.getCostPrice() == null ? ZERO : lot.getCostPrice();
+            InventoryMovement reversal = new InventoryMovement();
+            reversal.setBizType("PURCHASE_VOID");
+            reversal.setBatchKind("GREEN");
+            reversal.setBatchId(lot.getId());
+            reversal.setGreenBeanId(lot.getGreenBeanId());
+            reversal.setSupplierId(lot.getSupplierId());
+            reversal.setChangeKg(remaining.negate());
+            reversal.setUnitPrice(costPrice);
+            reversal.setAmount(remaining.negate().multiply(costPrice).setScale(2, RoundingMode.HALF_UP));
+            reversal.setRefDocNo(lot.getLotNo());
+            reversal.setOperatorId(operatorId);
+            reversal.setMovementDate(LocalDate.now());
+            reversal.setRemark(reason);
+            movementMapper.insert(reversal);
+        }
+
+        GreenBean bean = beanMapper.selectById(lot.getGreenBeanId());
+        Supplier supplier = supplierMapper.selectById(lot.getSupplierId());
+        auditService.record(operatorId, "GREEN_LOT_VOID", lot.getLotNo(),
+                "生豆批次作废 qty=" + remaining
+                        + (StringUtils.hasText(reason) ? " reason=" + reason : ""));
+        return toLotResponse(lot, bean, supplier);
+    }
+
     public PageResult<GreenLotResponse> listLots(String keyword, String status, Long supplierId,
                                                  Long greenBeanId, long page, long size) {
         LambdaQueryWrapper<GreenLot> w = new LambdaQueryWrapper<>();
@@ -140,7 +181,7 @@ public class PurchaseService {
             GreenLot lot = lots.get(m.getBatchId());
             GreenBean bean = beans.get(m.getGreenBeanId());
             return new InventoryMovementResponse(m.getId(), m.getBizType(), m.getBatchKind(), m.getBatchId(),
-                    lot == null ? null : lot.getLotNo(), m.getGreenBeanId(), bean == null ? null : bean.getName(),
+                    lot == null ? null : lot.getLotNo(), m.getGreenBeanId(), beanName(m.getGreenBeanId(), bean),
                     m.getSupplierId(), m.getChangeKg(), m.getUnitPrice(), m.getAmount(), m.getRefDocNo(),
                     m.getOperatorId(), m.getMovementDate(), m.getRemark(), m.getCreatedAt());
         }).toList();
@@ -151,10 +192,23 @@ public class PurchaseService {
         return "GB-" + Year.now().getValue() + "-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
     }
 
+    /**
+     * 生豆可被删除（守卫只看是否还有 AVAILABLE 批次），所以历史流水/作废批次上的
+     * green_bean_id 可能指向已删行。回退成占位文案，避免列表出现空白格。
+     */
+    private String beanName(Long greenBeanId, GreenBean bean) {
+        if (greenBeanId == null) return null;
+        return bean == null ? DELETED_LABEL : bean.getName();
+    }
+
+    private String supplierName(Supplier supplier) {
+        return supplier == null ? DELETED_LABEL : supplier.getName();
+    }
+
     private GreenLotResponse toLotResponse(GreenLot lot, GreenBean bean, Supplier supplier) {
         return new GreenLotResponse(lot.getId(), lot.getLotNo(), lot.getGreenBeanId(),
-                bean == null ? null : bean.getName(), lot.getSupplierId(),
-                supplier == null ? null : supplier.getName(), lot.getPurchaseDate(), lot.getTotalKg(),
+                beanName(lot.getGreenBeanId(), bean), lot.getSupplierId(),
+                supplierName(supplier), lot.getPurchaseDate(), lot.getTotalKg(),
                 lot.getRemainingKg(), lot.getCostPrice(), lot.getAmount(), lot.getStatus(), lot.getRemark(),
                 lot.getCreatedAt());
     }
