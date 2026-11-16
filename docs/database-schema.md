@@ -25,7 +25,7 @@
 | 2 | `audit_log` | 操作审计日志 | S1 | ✅ 已建 |
 | 3 | `supplier` | 供货商档案 | S2 | ✅ 已建 |
 | 4 | `customer` | 客户档案 | S2 | 🔲 待建 |
-| 5 | `green_bean` | 生豆品种档案 | S2 | ✅ 已建 |
+| 5 | `green_bean` | 生豆档案 | S2 | ✅ 已建 |
 | 6 | `roasted_product` | 熟豆商品 | S2 | 🔲 待建 |
 | 7 | `green_lot` | 生豆采购批＝生豆库存批 | S3 | ✅ 已建 |
 | 8 | `roast_batch` | 烘焙批次＝熟豆库存批 | S4 | 🔲 待建 |
@@ -33,6 +33,8 @@
 | 10 | `stock_doc` | 出入库单头 | S5 | 🔲 待建 |
 | 11 | `stock_doc_line` | 出入库单明细 | S5 | 🔲 待建 |
 | 12 | `inventory_movement` | 库存流水（只增不改） | S3–S5 共用 | ✅ 已建 |
+| 13 | `brew_method` | 冲煮方式档案（推荐方向选项源） | S2 扩充 | ✅ 已建（V7） |
+| 14 | `green_bean_brew_method` | 生豆-冲煮方式关联 | S2 扩充 | ✅ 已建（V7） |
 
 ### 1.1 ER 图（表间关系）
 
@@ -49,6 +51,8 @@ erDiagram
     GREEN_BEAN ||--o{ GREEN_LOT : "green_bean_id"
     GREEN_BEAN ||--o{ ROASTED_PRODUCT : "green_bean_id"
     GREEN_BEAN ||--o{ INVENTORY_MOVEMENT : "green_bean_id"
+    GREEN_BEAN ||--o{ GREEN_BEAN_BREW_METHOD : "green_bean_id"
+    BREW_METHOD ||--o{ GREEN_BEAN_BREW_METHOD : "brew_method_id"
 
     ROASTED_PRODUCT ||--o{ ROAST_BATCH : "product_id"
     ROASTED_PRODUCT ||--o{ INVENTORY_MOVEMENT : "roasted_product_id"
@@ -95,10 +99,35 @@ erDiagram
     }
     GREEN_BEAN {
         BIGINT id PK
+        VARCHAR code
+        VARCHAR bean_type
         VARCHAR name
+        VARCHAR origin
+        VARCHAR region
+        VARCHAR process
+        VARCHAR variety
+        VARCHAR season
+        VARCHAR flavor
+        VARCHAR recipe
+        INT agtron_color
+        DECIMAL moisture_pct
+        INT altitude_m
+        VARCHAR recommended_roast
+        VARCHAR package_spec
         BIGINT default_supplier_id FK
         VARCHAR status
         TINYINT deleted
+    }
+    BREW_METHOD {
+        BIGINT id PK
+        VARCHAR name
+        VARCHAR status
+        TINYINT deleted
+    }
+    GREEN_BEAN_BREW_METHOD {
+        BIGINT id PK
+        BIGINT green_bean_id FK
+        BIGINT brew_method_id FK
     }
     ROASTED_PRODUCT {
         BIGINT id PK
@@ -187,7 +216,7 @@ erDiagram
 
 ### 3.1 `sys_user` 系统用户
 
-来源：`V1__init_sys_user.sql` + `V2` 增量（`failed_attempts`、`locked_until`）。实体 `SysUser`。
+来源：`V1__init_sys_user.sql` + `V2` 增量（`failed_attempts`、`locked_until`）+ `V8` 增量（`phone`）。实体 `SysUser`。
 
 | 列 | 类型 | 可空 | 默认 | 说明 |
 |---|---|---|---|---|
@@ -195,6 +224,7 @@ erDiagram
 | `username` | VARCHAR(50) | 否 | — | 登录名，唯一 `uk_username` |
 | `password_hash` | VARCHAR(100) | 否 | — | BCrypt 哈希 |
 | `name` | VARCHAR(50) | 否 | — | 姓名 |
+| `phone` | VARCHAR(20) | 是 | — | 手机号（V8）；空 = 未绑定，登录尾号默认 `0000` |
 | `role` | VARCHAR(20) | 否 | — | `ADMIN` / `STAFF` / `READONLY` |
 | `status` | VARCHAR(20) | 否 | `ACTIVE` | `ACTIVE` / `DISABLED` |
 | `last_login_at` | DATETIME | 是 | — | 最后登录时间 |
@@ -204,7 +234,11 @@ erDiagram
 | `updated_at` | DATETIME | 否 | `CURRENT_TIMESTAMP ON UPDATE` | |
 | `deleted` | TINYINT | 否 | `0` | 逻辑删除 |
 
-**种子数据**：`BootstrapDataInitializer` 启动时若无 `admin` 则建 `admin / admin123`（ADMIN / ACTIVE）。**登录锁定**：连续失败 5 次锁 15 分钟。
+**种子数据**：`BootstrapDataInitializer` 启动时若无 `admin` 则建 `admin / Admin@123456`（ADMIN / ACTIVE，无手机号 → 登录尾号 `0000`，日志提示尽快修改）。
+
+**登录三要素**：用户名 + 密码 + 手机号后四位。有 `phone` 的账号校验其末 4 位；`phone` 为空（存量兜底）校验 `0000`。密码或尾号任一错误均返回同一「用户名或密码错误」且**计入失败次数**；连续失败 5 次锁 15 分钟（V2）。
+
+**密码强度策略（V8 起，仅新建/重置生效）**：至少 8 位，须同时含字母、数字与特殊符号。常量见 `security.PasswordPolicy`。存量哈希不追溯。
 
 ### 3.2 `audit_log` 操作审计日志
 
@@ -239,23 +273,38 @@ erDiagram
 | `updated_at` | DATETIME | 否 | `CURRENT_TIMESTAMP ON UPDATE` | |
 | `deleted` | TINYINT | 否 | `0` | 逻辑删除 |
 
-### 3.4 `green_bean` 生豆品种档案
+### 3.4 `green_bean` 生豆档案
 
-来源：`V3__greenbean_inventory.sql`。实体 `GreenBean`。主数据表，含 `deleted`。
+来源：`V3__greenbean_inventory.sql` + V6（类型判别与字段扩充）。实体 `GreenBean`。主数据表，含 `deleted`。
+
+> 字段按 `bean_type` 分组显示：**单品（SINGLE）**显示产地系字段（产地/产区/处理方式/豆种/产季/含水率/海拔）；**拼配（BLEND）**显示混配字段（配方/推荐色值）；编号/名称/风味/包装规格/推荐烘焙度/推荐方向为公共字段。
 
 | 列 | 类型 | 可空 | 默认 | 说明 |
 |---|---|---|---|---|
 | `id` | BIGINT AI | 否 | — | 主键 |
+| `code` | VARCHAR(50) | 是 | — | 编号（手动·可空·不查重，V6） |
+| `bean_type` | VARCHAR(20) | 否 | `SINGLE` | `SINGLE`单品 / `BLEND`拼配（V6） |
 | `name` | VARCHAR(150) | 否 | — | 品种名，唯一 `uk_green_bean_name` |
-| `origin` | VARCHAR(100) | 是 | — | 产地 |
-| `process` | VARCHAR(50) | 是 | — | 处理法 |
+| `origin` | VARCHAR(100) | 是 | — | 产地（国家，如 埃塞俄比亚） |
+| `region` | VARCHAR(100) | 是 | — | 产区（国家下一级，如 耶加雪菲，V6） |
+| `process` | VARCHAR(50) | 是 | — | 处理方式 |
 | `variety` | VARCHAR(80) | 是 | — | 豆种 |
+| `season` | VARCHAR(30) | 是 | — | 产季（如 `2025/2026`，V6） |
+| `flavor` | VARCHAR(500) | 是 | — | 风味/杯测描述（两类型共用，V6） |
+| `recipe` | VARCHAR(500) | 是 | — | 配方（自由文本，仅拼配，V6） |
+| `agtron_color` | INT | 是 | — | 推荐色值（Agtron 0–100，仅拼配，V6） |
+| `moisture_pct` | DECIMAL(5,2) | 是 | — | 含水率 %（0–100，V6） |
+| `altitude_m` | INT | 是 | — | 海拔 m（V6） |
+| `recommended_roast` | VARCHAR(20) | 是 | — | 推荐烘焙度：浅/中浅/中/中深/深（V6） |
+| `package_spec` | VARCHAR(100) | 是 | — | 包装规格（如 60kg/袋，V6） |
 | `default_supplier_id` | BIGINT | 是 | — | 默认供货商（软 FK → `supplier.id`） |
 | `status` | VARCHAR(20) | 否 | `ACTIVE` | `ACTIVE`/`DISABLED` |
-| `remark` | VARCHAR(500) | 是 | — | 杯测/风味 |
+| `remark` | VARCHAR(500) | 是 | — | 备注（其它说明；风味见 `flavor`） |
 | `created_at` | DATETIME | 否 | `CURRENT_TIMESTAMP` | |
 | `updated_at` | DATETIME | 否 | `CURRENT_TIMESTAMP ON UPDATE` | |
 | `deleted` | TINYINT | 否 | `0` | 逻辑删除 |
+
+> **推荐方向**（拼配所称的「推荐方向」即此）：多选，存于关联表 `green_bean_brew_method`；列表接口带 `?includeMethods=true` 时才装配 `brewMethodIds/brewMethodNames`。
 
 ### 3.5 `green_lot` 生豆采购批
 
@@ -302,6 +351,37 @@ erDiagram
 
 ---
 
+### 3.7 `brew_method` 冲煮方式档案
+
+来源：`V7__brew_method.sql`。实体 `BrewMethod`。主数据表，含 `deleted`。种子：手冲/冰滴/意式/法压/冷萃。
+
+| 列 | 类型 | 可空 | 默认 | 说明 |
+|---|---|---|---|---|
+| `id` | BIGINT AI | 否 | — | 主键 |
+| `name` | VARCHAR(50) | 否 | — | 名称，唯一 `uk_brew_method_name` |
+| `status` | VARCHAR(20) | 否 | `ACTIVE` | `ACTIVE`/`DISABLED` |
+| `created_at` | DATETIME | 否 | `CURRENT_TIMESTAMP` | |
+| `updated_at` | DATETIME | 否 | `CURRENT_TIMESTAMP ON UPDATE` | |
+| `deleted` | TINYINT | 否 | `0` | 逻辑删除 |
+
+> 删除拦截：已被 `green_bean_brew_method` 引用（即被某品种选为推荐方向）时禁止删除。
+
+### 3.8 `green_bean_brew_method` 品种-冲煮方式关联（推荐方向）
+
+来源：`V7__brew_method.sql`。实体 `GreenBeanBrewMethod`。明细表，无 `deleted`。
+
+| 列 | 类型 | 可空 | 默认 | 说明 |
+|---|---|---|---|---|
+| `id` | BIGINT AI | 否 | — | 主键 |
+| `green_bean_id` | BIGINT | 否 | — | 软 FK → `green_bean.id` |
+| `brew_method_id` | BIGINT | 否 | — | 软 FK → `brew_method.id` |
+| `created_at` | DATETIME | 否 | `CURRENT_TIMESTAMP` | |
+| `updated_at` | DATETIME | 否 | `CURRENT_TIMESTAMP ON UPDATE` | |
+
+唯一键 `uk_green_bean_brew (green_bean_id, brew_method_id)`；保存品种时**整存整删**。
+
+---
+
 ## 4. 待建表（M1 规划，DDL 草案）
 
 > 以下为按技术设计 spec 推导的字段级草图，**非最终 DDL**；`org_id` 等开放项见 §5。
@@ -330,7 +410,7 @@ CREATE TABLE customer (
 CREATE TABLE roasted_product (
     id                 BIGINT AUTO_INCREMENT PRIMARY KEY,
     name               VARCHAR(100)  NOT NULL,
-    green_bean_id      BIGINT        NULL COMMENT '关联生豆品种 软FK→green_bean.id',
+    green_bean_id      BIGINT        NULL COMMENT '关联生豆 软FK→green_bean.id',
     default_roast_level VARCHAR(20)  NULL COMMENT '浅/中浅/中/中深/深',
     price              DECIMAL(10,2) NULL COMMENT '售价 M2启用,M1可先填',
     alert_threshold_kg DECIMAL(10,3) NULL COMMENT '库存预警阈值',

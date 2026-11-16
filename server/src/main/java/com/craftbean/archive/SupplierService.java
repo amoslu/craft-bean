@@ -92,7 +92,7 @@ public class SupplierService {
         if (movementCount > 0) throw new AppException(400, 400, "该供货商已有库存流水，不能删除");
         Long beanCount = beanMapper.selectCount(
                 new LambdaQueryWrapper<GreenBean>().eq(GreenBean::getDefaultSupplierId, id));
-        if (beanCount > 0) throw new AppException(400, 400, "该供货商被生豆品种设为默认供货商，不能删除");
+        if (beanCount > 0) throw new AppException(400, 400, "该供货商被生豆设为默认供货商，不能删除");
         mapper.deleteById(id);
         auditService.record(operatorId, "SUPPLIER_DELETE", s.getName(), "删除供货商 " + s.getName());
     }

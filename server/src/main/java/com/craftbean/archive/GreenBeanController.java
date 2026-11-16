@@ -21,8 +21,9 @@ public class GreenBeanController {
     public Result<PageResult<GreenBean>> list(@RequestParam(required = false) String keyword,
                                               @RequestParam(required = false) String status,
                                               @RequestParam(defaultValue = "1") long page,
-                                              @RequestParam(defaultValue = "20") long size) {
-        return Result.ok(service.list(keyword, status, page, size));
+                                              @RequestParam(defaultValue = "20") long size,
+                                              @RequestParam(defaultValue = "false") boolean includeMethods) {
+        return Result.ok(service.list(keyword, status, page, size, includeMethods));
     }
 
     @PostMapping
@@ -35,5 +36,12 @@ public class GreenBeanController {
     @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     public Result<GreenBean> update(@PathVariable Long id, @Valid @RequestBody GreenBeanRequest req) {
         return Result.ok(service.update(id, req, CurrentUser.get().getId()));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<Void> delete(@PathVariable Long id) {
+        service.delete(id, CurrentUser.get().getId());
+        return Result.ok(null);
     }
 }

@@ -13,9 +13,10 @@ const routes = [
       { path: 'system/audit', component: () => import('../views/system/AuditLogView.vue'), meta: { title: '操作日志', group: '系统管理' } },
       { path: 'archive/suppliers', component: () => import('../views/archive/SuppliersView.vue'), meta: { title: '供货商', group: '基础档案' } },
       { path: 'archive/customers', component: () => import('../views/PlaceholderView.vue'), meta: { title: '客户', group: '基础档案' } },
-      { path: 'archive/green-bean', component: () => import('../views/archive/GreenBeanView.vue'), meta: { title: '生豆品种', group: '基础档案' } },
+      { path: 'archive/green-bean', component: () => import('../views/archive/GreenBeanView.vue'), meta: { title: '生豆', group: '基础档案' } },
+      { path: 'archive/brew-methods', component: () => import('../views/archive/BrewMethodView.vue'), meta: { title: '冲煮方式', group: '基础档案' } },
       { path: 'archive/roasted-product', component: () => import('../views/PlaceholderView.vue'), meta: { title: '熟豆商品', group: '基础档案' } },
-      { path: 'greenbean/purchases', component: () => import('../views/greenbean/PurchaseView.vue'), meta: { title: '采购入库', group: '生豆' } },
+      { path: 'greenbean/purchases', component: () => import('../views/greenbean/PurchaseView.vue'), meta: { title: '采购入库', group: '生豆管理' } },
       { path: 'roast/batches', component: () => import('../views/PlaceholderView.vue'), meta: { title: '烘焙批次', group: '烘焙' } },
       { path: 'stock/overview', component: () => import('../views/PlaceholderView.vue'), meta: { title: '库存看板', group: '熟豆库存' } }
     ]

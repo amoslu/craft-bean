@@ -16,10 +16,11 @@ const menus = [
   { title: '基础档案', children: [
     { path: '/archive/suppliers', label: '供货商' },
     { path: '/archive/customers', label: '客户' },
-    { path: '/archive/green-bean', label: '生豆品种' },
+    { path: '/archive/green-bean', label: '生豆' },
+    { path: '/archive/brew-methods', label: '冲煮方式' },
     { path: '/archive/roasted-product', label: '熟豆商品' }
   ] },
-  { title: '生豆', children: [{ path: '/greenbean/purchases', label: '采购入库' }] },
+  { title: '生豆管理', children: [{ path: '/greenbean/purchases', label: '采购入库' }] },
   { title: '烘焙', children: [{ path: '/roast/batches', label: '烘焙批次' }] },
   { title: '熟豆库存', children: [{ path: '/stock/overview', label: '库存看板' }] }
 ]
